@@ -1,0 +1,20 @@
+# Optional override: build the images locally instead of pulling them from GHCR.
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+# (Building the Rasa image also trains the model: ~3-5 minutes.)
+services:
+  rasa:
+    image: rasa-woocommerce-bridge-rasa:local
+    build:
+      context: .
+      dockerfile: Dockerfile.rasa
+  rasa-shell:
+    image: rasa-woocommerce-bridge-rasa:local
+  action-server:
+    image: rasa-woocommerce-bridge-actions:local
+    build:
+      context: .
+      dockerfile: Dockerfile.actions
+  auto-sync:
+    image: rasa-woocommerce-bridge-actions:local
+  sync:
+    image: rasa-woocommerce-bridge-actions:local

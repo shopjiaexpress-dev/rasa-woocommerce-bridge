@@ -1,0 +1,29 @@
+# Rasa server with this project's config, training data AND a trained model baked in.
+# Published to GHCR by .github/workflows/publish-images.yml, so servers only need to
+# pull it: no local build or training step.
+FROM rasa/rasa:3.6.20
+
+WORKDIR /app
+USER root
+
+COPY config.yml domain.yml endpoints.yml credentials.yml /app/
+COPY data /app/data
+COPY lookups /app/lookups
+
+# Normalise ownership + permissions: host files may be 0600/0700 or root-owned,
+# and the container runs as user 1001.
+RUN mkdir -p /app/models /app/tracker \
+ && chown -R 1001:0 /app \
+ && chmod -R u=rwX,g=rwX,o=rX /app
+
+USER 1001
+ENV RASA_TELEMETRY_ENABLED=false
+
+# Train at build time -> /app/models/woo-bot.tar.gz
+RUN rasa train --domain domain.yml --data data lookups --config config.yml \
+      --out models --fixed-model-name woo-bot \
+ && test -f models/woo-bot.tar.gz
+
+EXPOSE 5005
+# Inherited: ENTRYPOINT ["rasa"]
+CMD ["run", "--enable-api", "--cors", "*", "--model", "models", "--endpoints", "endpoints.yml", "--credentials", "credentials.yml"]

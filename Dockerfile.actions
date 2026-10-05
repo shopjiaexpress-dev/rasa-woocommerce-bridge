@@ -4,12 +4,20 @@ FROM rasa/rasa-sdk:3.6.2
 WORKDIR /app
 USER root
 
-COPY requirements-actions.txt /app/requirements-actions.txt
-RUN pip install --no-cache-dir -r /app/requirements-actions.txt
+COPY requirements-actions.txt /tmp/requirements-actions.txt
+RUN pip install --no-cache-dir -r /tmp/requirements-actions.txt
 
 COPY bridge /app/bridge
 COPY actions /app/actions
-RUN mkdir -p /app/bridge_cache /app/data && chown -R 1001:0 /app/bridge_cache /app/data
+COPY lookups /app/lookups
+
+# Files on the host may be 0600/0700 or owned by root (sudo unzip, SFTP uploads,
+# umask 077). COPY keeps those modes, and the container runs as user 1001, so
+# normalise ownership + permissions here. Otherwise: PermissionError on
+# /app/actions/__init__.py.
+RUN mkdir -p /app/bridge_cache \
+ && chown -R 1001:0 /app/bridge /app/actions /app/lookups /app/bridge_cache \
+ && chmod -R u=rwX,g=rwX,o=rX /app/bridge /app/actions /app/lookups /app/bridge_cache
 
 USER 1001
 EXPOSE 5055

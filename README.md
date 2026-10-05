@@ -17,7 +17,7 @@ or the email is wrong, and stops after 3 failed tries in one conversation.
 ```
  WooCommerce ── sitemap.xml ──┐
    (WordPress) ── REST API ───┤──► sync (every 6h) ──► bridge_cache/*.json ──► action-server ◄── rasa ◄── website chat
-                 ── pages ────┘                    └─► data/lookups.yml ──► rasa-train
+                 ── pages ────┘                    └─► lookups/lookups.yml ──► image build (CI)
 ```
 
 ## 1. Prerequisites
@@ -27,30 +27,47 @@ or the email is wrong, and stops after 3 failed tries in one conversation.
 * Your store on **HTTPS**, which WooCommerce needs for key/secret authentication.
 * Pretty permalinks turned on (*Settings → Permalinks*, anything except "Plain") so `/wp-json/` works.
 
-## 2. Configure
-```bash
-cp .env.example .env
-nano .env        # set WC_URL, WC_CONSUMER_KEY, WC_CONSUMER_SECRET
-# Linux only: put the output of `id -u` / `id -g` into HOST_UID / HOST_GID
-```
+## 2. Configure (credentials stay OUT of the repository)
+Set these as **environment variables** in your deployment platform, or put them in a
+`.env` file next to `docker-compose.yml` on the server. `.env` is git-ignored, so never commit it.
+`.env.example` lists every setting and only contains placeholders.
+
+| Variable | Required | Example |
+|---|---|---|
+| `WC_URL` | yes | `https://your-store.com` |
+| `WC_CONSUMER_KEY` / `WC_CONSUMER_SECRET` | yes | from *WooCommerce → Settings → Advanced → REST API* (Read) |
+| `SITEMAP_URL` | no | only if auto-detection fails |
+| `RETURN_WINDOW_DAYS`, `DELIVERY_DATE_META_KEYS`, `CRAWL_KINDS`, `SYNC_INTERVAL_SECONDS`, … | no | see `.env.example` |
+
 The sitemap is found automatically (Yoast / Rank Math `sitemap_index.xml`, or WordPress core `wp-sitemap.xml`).
-If yours is somewhere else, set `SITEMAP_URL`.
 
 > If WordPress runs on the **same machine** as Docker, don't use `localhost` in `WC_URL`. Inside a container,
 > `localhost` means the container itself. Use your domain, your LAN IP or `host.docker.internal`.
 
-## 3. Build, sync, train, run
+## 3. Deploy (prebuilt public images: no build step)
+GitHub Actions (`.github/workflows/publish-images.yml`) builds and publishes two images on every push to `main`:
+
+| Image | Contents |
+|---|---|
+| `ghcr.io/shopjiaexpress-dev/rasa-woocommerce-bridge-rasa:latest` | Rasa 3.6.20 + config + **trained model** |
+| `ghcr.io/shopjiaexpress-dev/rasa-woocommerce-bridge-actions:latest` | action server + sync tool |
+
+**One-time step after the first workflow run:** GitHub creates packages as *private*. For each of the two packages, open
+*GitHub → Packages → the package → Package settings → Danger Zone → Change visibility → Public*.
+
+On the server:
 ```bash
-docker compose build                      # builds the action-server image
-docker compose run --rm sync              # read sitemap + API + pages → bridge_cache/, data/lookups.yml
-docker compose run --rm rasa-train        # trains models/*.tar.gz (takes ~2–5 min)
-docker compose up -d                      # rasa :5005, action-server :5055, auto-sync
+docker compose pull
+docker compose up -d          # starts rasa, action-server and auto-sync (which syncs immediately)
+docker compose ps             # wait until rasa + action-server show (healthy)
+docker compose logs auto-sync # shows the sync summary
 ```
-The sync prints a summary like:
+The sync summary looks like:
 ```json
 { "sitemap": "https://your-store.com/sitemap_index.xml", "urls": "page=12, post=30, product=240, product_cat=18",
   "products": 240, "categories": 18, "page_chunks": 310, "lookups_changed": true }
 ```
+Prefer building on the server instead? `docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build`
 
 ### Talk to it
 ```bash
@@ -67,12 +84,14 @@ curl -s localhost:5005/webhooks/rest/webhook -d '{"sender":"me","message":"do yo
 ## 4. Keeping it up to date
 * **auto-sync** re-reads the sitemap, products and pages every `SYNC_INTERVAL_SECONDS` (default 6 h).
   The action server reloads the cache automatically. New prices, stock levels, pages and products
-  are used straight away, with no restart.
-* If you **add or rename many products**, retrain so the NLU recognises the new names
-  (the sync log says when `lookups_changed` is true):
-  ```bash
-  docker compose run --rm rasa-train && docker compose restart rasa
-  ```
+  are used straight away, with no restart or retraining.
+* **Changing the bot** (`domain.yml`, `config.yml`, `data/*.yml`, `actions/`, `bridge/`): push to `main`.
+  GitHub Actions retrains and republishes the images (~5–8 min). Then on the server:
+  `docker compose pull && docker compose up -d`
+* **Teaching the NLU your exact product names** (optional): run a sync locally
+  (`python -m bridge.sync --no-crawl` with your env vars set), then commit the generated `lookups/lookups.yml`.
+  It only contains public product/category names. Push, and the next image build trains with them.
+  Without this the bot still finds products by fuzzy search.
 * Order data is always fetched live. It is never cached.
 
 ## 5. Plugin-specific settings
@@ -95,23 +114,44 @@ bridge/            the bridge (plain Python, no Rasa dependency)
   sync.py            CLI: python -m bridge.sync [--no-api] [--no-crawl]
   store.py           cache loader that reloads automatically for the action server
 actions/actions.py Rasa custom actions (products, page answers, order form + verification)
-domain.yml, config.yml, data/   Rasa 3.6 project (data/lookups.yml is generated by sync)
-docker-compose.yml, Dockerfile.actions
+domain.yml, config.yml, data/   Rasa 3.6 project
+lookups/lookups.yml           product/category lookup tables (generated by sync)
+docker-compose.yml           deploy from public images (no build)
+docker-compose.build.yml     optional override to build locally
+Dockerfile.rasa, Dockerfile.actions
+.github/workflows/           test + build + publish images to GHCR
 tests/             mock WooCommerce server + 20 end-to-end tests
 ```
 
 ## 7. Customising
 * **Bot wording:** edit `responses:` in `domain.yml`.
-* **Better intent recognition:** add real customer phrasing to `data/nlu.yml`, then retrain.
+* **Better intent recognition:** add real customer phrasing to `data/nlu.yml`, then push (CI retrains).
   Hinglish and Hindi examples work too.
 * **New capabilities** (coupons, cart links, stock alerts, …): add a method to `bridge/woo_client.py`, an
-  action in `actions/actions.py`, an intent and a rule, then retrain.
+  action in `actions/actions.py`, an intent and a rule, then push.
 * **Running tests** (no Docker needed):
   `pip install -r requirements-actions.txt pytest && pytest -q tests/`
 
-## 8. Security notes
+## 8. Troubleshooting
+| Symptom | Cause / fix |
+|---|---|
+| `docker compose pull` says `denied` / `unauthorized` for `ghcr.io/...` | The GHCR packages are still private. Make both public (see step 3). |
+| GitHub Actions run fails at "login" / "push" with 403 | *Repo → Settings → Actions → General → Workflow permissions*: allow **Read and write**, then re-run. |
+| `PermissionError: ... /app/actions/__init__.py` and containers restarting | You're on an old version. The current images fix their own permissions. Run `docker compose down`, update, then `docker compose pull && docker compose up -d`. |
+| `rasa` shows **(unhealthy)**, and the bot replies with nothing (`[]`) | The image has no model loaded. Pull the latest image (`docker compose pull && docker compose up -d`) and check the GitHub Actions run succeeded. |
+| `rasa` keeps restarting with exit code 137 | Out of memory. Rasa needs about 2 GB free. Add swap or use a 4 GB+ server. |
+| Sync fails with `401 woocommerce_rest_cannot_view` | Wrong key/secret, or the key isn't **Read** permission. Some hosts strip the `Authorization` header; ask the host to allow it. |
+| Sync can't reach the store | `WC_URL` must be reachable *from inside Docker*. Don't use `localhost` (see step 2). |
+
+Useful commands: `docker compose ps`, `docker compose logs -f rasa action-server`,
+`docker compose run --rm sync --no-crawl` (fast product refresh),
+`docker compose down -v` (**deletes** chat history and cache volumes).
+
+## 9. Security notes
 * Use a **Read-only** API key. The bot never writes to your store.
-* Keep `.env` private. It is git- and docker-ignored.
-* Port 5055 (action server) does not need to be public. Only expose 5005, and only through HTTPS.
-  In production, remove the `ports:` entry from `action-server`.
+* **Never commit real credentials.** `.env` is git- and docker-ignored, and `.env.example` must only contain placeholders.
+  If a key is ever pushed, revoke it in WooCommerce right away and create a new one. Deleting the file
+  doesn't remove it from git history.
+* Rasa is published on `127.0.0.1:5005` only and the action server isn't published at all, so neither is
+  reachable from the internet. Expose the bot only through your HTTPS reverse proxy.
 * `--cors "*"` is convenient for testing. Set it to your store's domain in `docker-compose.yml` for production.

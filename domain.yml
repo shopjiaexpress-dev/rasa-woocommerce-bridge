@@ -1,0 +1,136 @@
+version: "3.1"
+
+intents:
+  - greet
+  - goodbye
+  - affirm
+  - deny
+  - thank
+  - bot_challenge
+  - search_product
+  - product_details
+  - ask_site_info
+  - ask_order_status
+  - ask_delivery_date
+  - ask_return
+  - inform_order
+  - other_order
+
+entities:
+  - product
+  - product_category
+  - order_number
+  - email
+
+slots:
+  current_product_id:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: custom
+  current_product_name:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: custom
+
+  order_number:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: from_entity
+        entity: order_number
+        intent: [ask_order_status, ask_delivery_date, ask_return, inform_order, other_order]
+      - type: from_text
+        conditions:
+          - active_loop: order_form
+            requested_slot: order_number
+  order_email:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: from_entity
+        entity: email
+        intent: [ask_order_status, ask_delivery_date, ask_return, inform_order, other_order]
+      - type: from_text
+        conditions:
+          - active_loop: order_form
+            requested_slot: order_email
+  order_topic:
+    type: categorical
+    values: [status, delivery, return]
+    influence_conversation: false
+    mappings:
+      - type: from_intent
+        intent: ask_order_status
+        value: status
+      - type: from_intent
+        intent: ask_delivery_date
+        value: delivery
+      - type: from_intent
+        intent: ask_return
+        value: return
+  order_attempts:
+    type: float
+    influence_conversation: false
+    initial_value: 0
+    mappings:
+      - type: custom
+  order_verified:
+    type: bool
+    influence_conversation: false
+    initial_value: false
+    mappings:
+      - type: custom
+
+forms:
+  order_form:
+    required_slots:
+      - order_number
+      - order_email
+
+actions:
+  - action_search_products
+  - action_product_details
+  - action_answer_from_site
+  - action_order_info
+  - action_reset_order
+  - validate_order_form
+
+responses:
+  utter_greet:
+    - text: "Hi! 👋 I can help you find products, check prices and stock, track your order, and answer questions about shipping and returns. What can I do for you?"
+  utter_goodbye:
+    - text: "Thanks for visiting — have a great day!"
+  utter_you_are_welcome:
+    - text: "You're welcome! Anything else I can help with?"
+  utter_iamabot:
+    - text: "I'm the store's virtual assistant. For anything I can't handle, our support team is happy to help."
+  utter_anything_else:
+    - text: "Is there anything else I can help you with?"
+  utter_default:
+    - text: "Sorry, I couldn't find an answer to that. You can ask me about products, an order, shipping or returns — or contact our support team."
+
+  utter_no_products_found:
+    - text: "I couldn't find a matching product. Could you describe it differently (for example the product type or brand)?"
+  utter_ask_which_product:
+    - text: "Which product do you mean? Tell me its name and I'll look it up."
+
+  utter_ask_order_number:
+    - text: "Sure — what's your order number? (You'll find it in your confirmation email.)"
+  utter_ask_order_email:
+    - text: "Thanks. To keep your order private, please enter the email address used for the order."
+  utter_invalid_order_number:
+    - text: "That doesn't look like an order number — it should be digits only, like 1234."
+  utter_invalid_email:
+    - text: "That doesn't look like a valid email address. Please try again."
+  utter_order_not_found:
+    - text: "I couldn't find an order matching that order number and email. Please double-check both and try again."
+  utter_too_many_attempts:
+    - text: "For security I can't look up more orders in this chat. Please contact our support team and they'll help you right away."
+  utter_orders_unavailable:
+    - text: "I can't access order information right now. Please try again later or contact our support team."
+
+session_config:
+  session_expiration_time: 60
+  carry_over_slots_to_new_session: false

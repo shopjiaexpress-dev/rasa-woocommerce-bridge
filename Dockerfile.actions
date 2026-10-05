@@ -1,0 +1,16 @@
+# Action server + sync tool. Base image matches Rasa 3.6.20 (rasa-sdk 3.6.2).
+FROM rasa/rasa-sdk:3.6.2
+
+WORKDIR /app
+USER root
+
+COPY requirements-actions.txt /app/requirements-actions.txt
+RUN pip install --no-cache-dir -r /app/requirements-actions.txt
+
+COPY bridge /app/bridge
+COPY actions /app/actions
+RUN mkdir -p /app/bridge_cache /app/data && chown -R 1001:0 /app/bridge_cache /app/data
+
+USER 1001
+EXPOSE 5055
+# Inherited: ENTRYPOINT ["./entrypoint.sh"]  CMD ["start", "--actions", "actions"]

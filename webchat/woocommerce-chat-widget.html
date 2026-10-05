@@ -1,0 +1,9 @@
+<!--
+  Paste this into WordPress so the chat bubble appears on every page:
+    Appearance > Theme File Editor > footer.php (before </body>)
+    or a plugin like "WPCode" / "Insert Headers and Footers" (Footer section).
+  Replace https://chat.your-store.com with the public HTTPS URL of your Rasa server
+  (port 5005 behind a reverse proxy such as Nginx/Caddy).
+-->
+<div id="rasa-chat-widget" data-websocket-url="https://chat.your-store.com/"></div>
+<script src="https://unpkg.com/@rasahq/rasa-chat" type="application/javascript"></script>

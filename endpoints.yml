@@ -1,0 +1,9 @@
+# Inside docker compose the action server is reachable by its service name.
+action_endpoint:
+  url: "http://action-server:5055/webhook"
+
+# Persist conversations in Redis-free SQLite by default (survives restarts).
+tracker_store:
+  type: SQL
+  dialect: "sqlite"
+  db: "/app/tracker/rasa.db"

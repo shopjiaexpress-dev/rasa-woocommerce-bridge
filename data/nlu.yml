@@ -1,0 +1,207 @@
+version: "3.1"
+
+nlu:
+- regex: order_number
+  examples: |
+    - #?\b\d{3,10}\b
+
+- regex: email
+  examples: |
+    - [\w.+\-]+@[\w\-]+(\.[\w\-]+)+
+
+- intent: greet
+  examples: |
+    - hi
+    - hello
+    - hey
+    - hey there
+    - good morning
+    - good evening
+    - hi there
+    - hello bot
+    - namaste
+    - hii
+
+- intent: goodbye
+  examples: |
+    - bye
+    - goodbye
+    - see you
+    - see you later
+    - that's all
+    - bye bye
+    - have a nice day
+    - talk to you later
+
+- intent: affirm
+  examples: |
+    - yes
+    - yeah
+    - yep
+    - sure
+    - of course
+    - correct
+    - ok
+    - sounds good
+
+- intent: deny
+  examples: |
+    - no
+    - nope
+    - no thanks
+    - not now
+    - never mind
+    - no that's it
+
+- intent: thank
+  examples: |
+    - thanks
+    - thank you
+    - thanks a lot
+    - great thanks
+    - thank you so much
+    - cheers
+    - perfect, thanks
+
+- intent: bot_challenge
+  examples: |
+    - are you a bot?
+    - are you human?
+    - am I talking to a bot?
+    - am I talking to a real person?
+    - who are you
+
+- intent: search_product
+  examples: |
+    - do you have [running shoes](product)?
+    - do you sell [hoodies](product_category)
+    - I'm looking for a [blue t-shirt](product)
+    - show me [jeans](product_category)
+    - I want to buy a [laptop bag](product)
+    - find [wireless earbuds](product)
+    - what [t-shirts](product_category) do you have
+    - any [summer dresses](product_category)?
+    - do you have something for [kids](product_category)
+    - search for [leather wallet](product)
+    - show me your [accessories](product_category)
+    - looking for a gift
+    - what products do you sell
+    - what's new in the store
+    - I need [a phone case](product)
+    - have you got [yoga mats](product)
+    - can I see [sneakers](product_category)
+    - do you stock [coffee beans](product)
+    - show me products under [kitchen](product_category)
+    - I'm searching for [a water bottle](product)
+
+- intent: product_details
+  examples: |
+    - how much is the [classic hoodie](product)?
+    - what's the price of [beanie](product)
+    - is the [blue t-shirt](product) in stock?
+    - tell me more about [leather wallet](product)
+    - how much does it cost
+    - what's the price
+    - is it available?
+    - is this in stock
+    - what sizes does it come in?
+    - what colours are available
+    - details of [wireless earbuds](product)
+    - price of [yoga mat](product)
+    - is [running shoes](product) available in size 10
+    - how much is that
+    - tell me more about it
+    - does it come in other colors?
+    - is the [beanie](product) on sale
+
+- intent: ask_site_info
+  examples: |
+    - what is your shipping policy?
+    - how long does shipping take?
+    - do you ship internationally?
+    - how much is delivery?
+    - what's your return policy?
+    - how do I return an item?
+    - can I exchange a product?
+    - what payment methods do you accept?
+    - do you accept cash on delivery?
+    - how can I contact you?
+    - what is your phone number
+    - where are you located?
+    - what are your opening hours?
+    - do you have a warranty?
+    - how do I track my parcel in general
+    - is there free shipping?
+    - how do I cancel an order?
+    - what is your privacy policy
+    - tell me about your company
+    - do you offer discounts or coupons?
+    - how do refunds work?
+    - what are the terms and conditions
+
+- intent: ask_order_status
+  examples: |
+    - where is my order?
+    - what's the status of my order
+    - check my order status
+    - order status for [1234](order_number)
+    - where is order [#56789](order_number)
+    - has my order shipped?
+    - track my order
+    - my order [10234](order_number) status please
+    - I want to know about my order
+    - what happened to my order [4521](order_number)
+    - is my order processed yet?
+    - order [#2201](order_number) and email [anita@example.com](email)
+    - can you check order [7781](order_number)
+    - status of my purchase
+
+- intent: ask_delivery_date
+  examples: |
+    - when will my order arrive?
+    - when will I get my order
+    - what is the delivery date of my order
+    - expected delivery date for order [4521](order_number)
+    - give me the tracking number
+    - tracking number for order [#1234](order_number)
+    - when will order [8812](order_number) be delivered
+    - has my parcel been dispatched? when will it arrive
+    - delivery date for my order please
+    - what's my tracking link
+    - when is my package coming
+
+- intent: ask_return
+  examples: |
+    - can I return my order?
+    - I want to return order [1234](order_number)
+    - where is my refund?
+    - has my refund been processed
+    - refund status for order [#5521](order_number)
+    - is my order eligible for return
+    - I want a refund for my order
+    - return details for my order
+    - did you refund order [9012](order_number)?
+    - when will I get my money back for my order
+    - can I still return what I bought
+
+- intent: inform_order
+  examples: |
+    - [1234](order_number)
+    - #[4521](order_number)
+    - order number is [10234](order_number)
+    - it's [#7781](order_number)
+    - my order number is [5521](order_number)
+    - [rahul@example.com](email)
+    - my email is [priya.s@gmail.com](email)
+    - email: [john.doe@shop.co](email)
+    - it's [maria+orders@yahoo.com](email)
+    - [8812](order_number), [sam@example.org](email)
+
+- intent: other_order
+  examples: |
+    - I have another order
+    - check a different order
+    - another order please
+    - different order number
+    - what about my other order
+    - can you check one more order

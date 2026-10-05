@@ -1,0 +1,84 @@
+version: "3.1"
+
+rules:
+- rule: greet
+  steps:
+  - intent: greet
+  - action: utter_greet
+
+- rule: goodbye
+  steps:
+  - intent: goodbye
+  - action: utter_goodbye
+
+- rule: thanks
+  steps:
+  - intent: thank
+  - action: utter_you_are_welcome
+
+- rule: bot challenge
+  steps:
+  - intent: bot_challenge
+  - action: utter_iamabot
+
+- rule: search products
+  steps:
+  - intent: search_product
+  - action: action_search_products
+
+- rule: product details
+  steps:
+  - intent: product_details
+  - action: action_product_details
+
+- rule: answer from site pages
+  steps:
+  - intent: ask_site_info
+  - action: action_answer_from_site
+
+- rule: low NLU confidence -> try site pages
+  steps:
+  - intent: nlu_fallback
+  - action: action_answer_from_site
+
+# ---- orders -------------------------------------------------------------
+- rule: start order form (status)
+  steps:
+  - intent: ask_order_status
+  - action: order_form
+  - active_loop: order_form
+
+- rule: start order form (delivery)
+  steps:
+  - intent: ask_delivery_date
+  - action: order_form
+  - active_loop: order_form
+
+- rule: start order form (return)
+  steps:
+  - intent: ask_return
+  - action: order_form
+  - active_loop: order_form
+
+- rule: user gives order details unprompted
+  steps:
+  - intent: inform_order
+  - action: order_form
+  - active_loop: order_form
+
+- rule: another order
+  steps:
+  - intent: other_order
+  - action: action_reset_order
+  - action: order_form
+  - active_loop: order_form
+
+- rule: submit order form
+  condition:
+  - active_loop: order_form
+  steps:
+  - action: order_form
+  - active_loop: null
+  - slot_was_set:
+    - requested_slot: null
+  - action: action_order_info

@@ -1,0 +1,75 @@
+# Rasa Open Source 3.6.20 + WooCommerce bridge
+#
+#   docker compose build
+#   docker compose run --rm sync          # pull sitemap + products + pages
+#   docker compose run --rm rasa-train    # train the model (repeat when lookups change)
+#   docker compose up -d                  # start Rasa, action server and auto-sync
+#
+# On Linux, set HOST_UID / HOST_GID in .env (output of `id -u` / `id -g`) so the
+# containers can write to ./models and ./tracker.
+
+x-rasa-common: &rasa-common
+  image: rasa/rasa:3.6.20-full
+  user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+  working_dir: /app
+  volumes:
+    - ./:/app
+  environment:
+    - HOME=/tmp
+
+x-bridge-common: &bridge-common
+  build:
+    context: .
+    dockerfile: Dockerfile.actions
+  image: woo-rasa-actions:latest
+  user: "${HOST_UID:-1000}:0"
+  env_file: .env
+  volumes:
+    - ./bridge_cache:/app/bridge_cache
+    - ./data:/app/data
+  extra_hosts:
+    - "host.docker.internal:host-gateway"   # lets WC_URL point to a store on this machine
+
+services:
+  rasa:
+    <<: *rasa-common
+    command: run --enable-api --cors "*" --model models --endpoints endpoints.yml --credentials credentials.yml
+    ports:
+      - "5005:5005"
+    depends_on:
+      - action-server
+    restart: unless-stopped
+
+  action-server:
+    <<: *bridge-common
+    ports:
+      - "5055:5055"
+    restart: unless-stopped
+
+  # Re-syncs the sitemap/products/pages periodically (SYNC_INTERVAL_SECONDS, default 6h).
+  # Prices, stock and page answers update without restarts; retrain only when you
+  # add/rename many products (lookup tables).
+  auto-sync:
+    <<: *bridge-common
+    entrypoint: ["sh", "-c", "while true; do python -m bridge.sync || echo 'sync failed'; sleep ${SYNC_INTERVAL_SECONDS:-21600}; done"]
+    restart: unless-stopped
+
+  # ---- one-off tools (run with: docker compose run --rm <name>) -----------
+  sync:
+    <<: *bridge-common
+    entrypoint: ["python", "-m", "bridge.sync"]
+    profiles: ["tools"]
+
+  rasa-train:
+    <<: *rasa-common
+    command: train --domain domain.yml --data data --config config.yml --out models
+    profiles: ["tools"]
+
+  rasa-shell:
+    <<: *rasa-common
+    command: shell --model models --endpoints endpoints.yml
+    stdin_open: true
+    tty: true
+    depends_on:
+      - action-server
+    profiles: ["tools"]

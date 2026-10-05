@@ -1,0 +1,53 @@
+version: "3.1"
+
+stories:
+- story: find a product then ask its price
+  steps:
+  - intent: greet
+  - action: utter_greet
+  - intent: search_product
+    entities:
+    - product: running shoes
+  - action: action_search_products
+  - intent: product_details
+  - action: action_product_details
+  - intent: thank
+  - action: utter_you_are_welcome
+
+- story: order status with number and email
+  steps:
+  - intent: ask_order_status
+  - action: order_form
+  - active_loop: order_form
+  - slot_was_set:
+    - requested_slot: order_number
+  - intent: inform_order
+    entities:
+    - order_number: "1234"
+  - action: order_form
+  - slot_was_set:
+    - order_number: "1234"
+  - slot_was_set:
+    - requested_slot: order_email
+  - intent: inform_order
+    entities:
+    - email: anita@example.com
+  - action: order_form
+  - slot_was_set:
+    - order_email: anita@example.com
+  - slot_was_set:
+    - requested_slot: null
+  - active_loop: null
+  - action: action_order_info
+  - intent: ask_delivery_date
+  - action: order_form
+  - active_loop: order_form
+  - active_loop: null
+  - action: action_order_info
+
+- story: shipping question then product search
+  steps:
+  - intent: ask_site_info
+  - action: action_answer_from_site
+  - intent: search_product
+  - action: action_search_products

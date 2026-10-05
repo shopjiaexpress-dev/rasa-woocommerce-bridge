@@ -1,0 +1,39 @@
+recipe: default.v1
+language: en
+assistant_id: woocommerce-bridge-bot
+
+pipeline:
+  - name: WhitespaceTokenizer
+  - name: RegexFeaturizer
+    use_lookup_tables: true
+    use_regexes: true
+    case_sensitive: false
+  - name: LexicalSyntacticFeaturizer
+  - name: CountVectorsFeaturizer
+  - name: CountVectorsFeaturizer
+    analyzer: char_wb
+    min_ngram: 1
+    max_ngram: 4
+  - name: DIETClassifier
+    epochs: 100
+    constrain_similarities: true
+  # Picks up exact product / category names from the synced lookup tables,
+  # plus order numbers and e-mail addresses from the regexes in data/nlu.yml.
+  - name: RegexEntityExtractor
+    use_lookup_tables: true
+    use_regexes: true
+    case_sensitive: false
+  - name: EntitySynonymMapper
+  - name: FallbackClassifier
+    threshold: 0.45
+
+policies:
+  - name: MemoizationPolicy
+  - name: RulePolicy
+    core_fallback_threshold: 0.3
+    core_fallback_action_name: action_answer_from_site
+    enable_fallback_prediction: true
+  - name: TEDPolicy
+    max_history: 5
+    epochs: 100
+    constrain_similarities: true

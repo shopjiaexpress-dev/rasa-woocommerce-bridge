@@ -77,6 +77,30 @@ services:
     entrypoint: ["sh", "-c", "while true; do python -m bridge.sync || echo 'sync failed'; sleep ${SYNC_INTERVAL_SECONDS:-21600}; done"]
     restart: unless-stopped
 
+  # Chatwoot Agent Bot <-> Rasa. Chatwoot posts to https://<rasa-domain>/chatwoot/webhook,
+  # which your reverse proxy forwards to 127.0.0.1:5056.
+  chatwoot-connector:
+    image: ${ACTIONS_IMAGE:-ghcr.io/shopjiaexpress-dev/rasa-woocommerce-bridge-actions:latest}
+    entrypoint: ["python", "-m", "bridge.chatwoot_connector"]
+    environment:
+      CHATWOOT_URL: ${CHATWOOT_URL:-}
+      CHATWOOT_BOT_TOKEN: ${CHATWOOT_BOT_TOKEN:-}
+      CHATWOOT_WEBHOOK_SECRET: ${CHATWOOT_WEBHOOK_SECRET:-}
+      CHATWOOT_URL_TOKEN: ${CHATWOOT_URL_TOKEN:-}
+      RASA_URL: http://rasa:5005
+    ports:
+      - "127.0.0.1:5056:5056"
+    depends_on:
+      rasa:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5056/health', timeout=5)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
   # ---- optional one-off tools (docker compose run --rm <name>) ---------------
   sync:
     <<: *bridge-common

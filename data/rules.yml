@@ -82,3 +82,18 @@ rules:
   - slot_was_set:
     - requested_slot: null
   - action: action_order_info
+
+# ---- human handoff (Chatwoot) -----------------------------------------------
+- rule: hand off to a human
+  steps:
+  - intent: human_handoff
+  - action: utter_handoff
+
+- rule: hand off to a human during the order form
+  condition:
+  - active_loop: order_form
+  steps:
+  - intent: human_handoff
+  - action: utter_handoff
+  - action: action_deactivate_loop
+  - active_loop: null

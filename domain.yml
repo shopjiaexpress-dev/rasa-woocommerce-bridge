@@ -15,6 +15,7 @@ intents:
   - ask_return
   - inform_order
   - other_order
+  - human_handoff
 
 entities:
   - product
@@ -42,6 +43,7 @@ slots:
         entity: order_number
         intent: [ask_order_status, ask_delivery_date, ask_return, inform_order, other_order]
       - type: from_text
+        not_intent: [human_handoff, goodbye]
         conditions:
           - active_loop: order_form
             requested_slot: order_number
@@ -53,6 +55,7 @@ slots:
         entity: email
         intent: [ask_order_status, ask_delivery_date, ask_return, inform_order, other_order]
       - type: from_text
+        not_intent: [human_handoff, goodbye]
         conditions:
           - active_loop: order_form
             requested_slot: order_email
@@ -127,9 +130,19 @@ responses:
   utter_order_not_found:
     - text: "I couldn't find an order matching that order number and email. Please double-check both and try again."
   utter_too_many_attempts:
-    - text: "For security I can't look up more orders in this chat. Please contact our support team and they'll help you right away."
+    - text: "For security I can't look up more orders in this chat. I'm connecting you to our support team now."
+      custom:
+        handoff: true
   utter_orders_unavailable:
-    - text: "I can't access order information right now. Please try again later or contact our support team."
+    - text: "I can't access order information right now. I'm connecting you to our support team."
+      custom:
+        handoff: true
+
+  # `custom: handoff` makes the Chatwoot connector move the conversation to a human agent.
+  utter_handoff:
+    - text: "Sure, I'm connecting you to a member of our team. They'll reply here shortly."
+      custom:
+        handoff: true
 
 session_config:
   session_expiration_time: 60

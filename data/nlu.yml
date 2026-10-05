@@ -205,3 +205,21 @@ nlu:
     - different order number
     - what about my other order
     - can you check one more order
+
+- intent: human_handoff
+  examples: |
+    - talk to a human
+    - I want to talk to a person
+    - connect me to an agent
+    - can I speak to someone
+    - customer care
+    - customer support please
+    - real person please
+    - human agent
+    - let me talk to your team
+    - I need help from a human
+    - call me back
+    - you are not helping, get me a person
+    - transfer me to support
+    - speak to a representative
+    - agent please

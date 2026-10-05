@@ -18,3 +18,5 @@ services:
     image: rasa-woocommerce-bridge-actions:local
   sync:
     image: rasa-woocommerce-bridge-actions:local
+  chatwoot-connector:
+    image: rasa-woocommerce-bridge-actions:local

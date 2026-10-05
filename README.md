@@ -76,6 +76,29 @@ docker compose run --rm rasa-shell        # chat in the terminal
 curl -s localhost:5005/webhooks/rest/webhook -d '{"sender":"me","message":"do you have hoodies?"}'
 ```
 
+### Connect Chatwoot (Agent Bot)
+The `chatwoot-connector` service receives Chatwoot's bot webhooks, asks Rasa, and posts the replies back.
+Conversations stay **pending** while the bot handles them. When the customer asks for a person, or the
+bot can't help with an order, the conversation switches to **open** and your agents take over. The bot stays
+silent until an agent sets the conversation back to *pending*.
+
+1. **Chatwoot → Settings → Bots → Add bot.** Webhook URL: `https://<your-rasa-domain>/chatwoot/webhook`.
+   Copy the bot's **access token** (and the **webhook secret**, if your Chatwoot version shows one).
+2. **Chatwoot → Settings → Inboxes → your inbox → Bot configuration:** select the bot and save.
+3. Set on the server: `CHATWOOT_URL`, `CHATWOOT_BOT_TOKEN`, `CHATWOOT_WEBHOOK_SECRET`.
+   No secret shown in your version? Set `CHATWOOT_URL_TOKEN` to a long random string instead, and append
+   `?token=<that string>` to the webhook URL.
+4. Route `/chatwoot/` on your Rasa domain to the connector (`127.0.0.1:5056`). With Caddy:
+   ```
+   ai.your-domain.com {
+       handle /chatwoot/* {
+           reverse_proxy localhost:5056
+       }
+       reverse_proxy localhost:5005
+   }
+   ```
+5. `docker compose up -d`, then check `docker compose ps`: `chatwoot-connector` should be *(healthy)*.
+
 ### Add the chat bubble to WooCommerce
 1. Put the Rasa server (port 5005) behind HTTPS, e.g. `chat.your-store.com` → Nginx/Caddy → `localhost:5005`.
 2. Paste `webchat/woocommerce-chat-widget.html` into your theme footer, or use the WPCode plugin's footer section.
@@ -112,6 +135,7 @@ bridge/            the bridge (plain Python, no Rasa dependency)
   catalog.py         product/category catalogue + fuzzy search
   page_index.py      crawls pages + BM25 search for FAQ-style answers
   sync.py            CLI: python -m bridge.sync [--no-api] [--no-crawl]
+  chatwoot_connector.py  Chatwoot Agent Bot webhook <-> Rasa (+ human handoff)
   store.py           cache loader that reloads automatically for the action server
 actions/actions.py Rasa custom actions (products, page answers, order form + verification)
 domain.yml, config.yml, data/   Rasa 3.6 project
@@ -120,7 +144,7 @@ docker-compose.yml           deploy from public images (no build)
 docker-compose.build.yml     optional override to build locally
 Dockerfile.rasa, Dockerfile.actions
 .github/workflows/           test + build + publish images to GHCR
-tests/             mock WooCommerce server + 20 end-to-end tests
+tests/             mock WooCommerce server, fake Chatwoot, 28 tests
 ```
 
 ## 7. Customising
@@ -135,6 +159,8 @@ tests/             mock WooCommerce server + 20 end-to-end tests
 ## 8. Troubleshooting
 | Symptom | Cause / fix |
 |---|---|
+| Chatwoot bot never replies | `docker compose logs chatwoot-connector`. A `rejected webhook` warning means the secret/token doesn't match. No log lines at all means Chatwoot can't reach `/chatwoot/webhook` (check the proxy route). A `Chatwoot ... 401` error means the bot token is wrong. |
+| Bot replies stop after a while | The conversation was moved to *open* (handoff). Set it back to *pending* to return it to the bot. |
 | `docker compose pull` says `denied` / `unauthorized` for `ghcr.io/...` | The GHCR packages are still private. Make both public (see step 3). |
 | GitHub Actions run fails at "login" / "push" with 403 | *Repo → Settings → Actions → General → Workflow permissions*: allow **Read and write**, then re-run. |
 | `PermissionError: ... /app/actions/__init__.py` and containers restarting | You're on an old version. The current images fix their own permissions. Run `docker compose down`, update, then `docker compose pull && docker compose up -d`. |

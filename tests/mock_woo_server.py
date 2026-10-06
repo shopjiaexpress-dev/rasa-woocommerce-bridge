@@ -105,6 +105,8 @@ class H(BaseHTTPRequestHandler):
                 locs = [f"{b}{p}" for p in PAGES]
             urls = "".join(f"<url><loc>{l}</loc><lastmod>2026-10-01</lastmod></url>" for l in locs)
             return self._send(200, f'<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>', "application/xml")
+        if path not in PAGES and path + "/" in PAGES:
+            path = path + "/"
         if path in PAGES:
             title, body = PAGES[path]
             html = f"<html><head><title>{title} | Demo Store</title></head><body><header><nav>Home Shop Cart</nav></header><main><h1>{title}</h1>{body}</main><footer>© Demo</footer></body></html>"

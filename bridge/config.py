@@ -40,6 +40,16 @@ WC_VERIFY_SSL = _bool("WC_VERIFY_SSL", True)
 # /wp-sitemap.xml for WordPress core, /sitemap.xml as a last resort).
 SITEMAP_URL = _env("SITEMAP_URL", "")
 
+# Public shop domain, if customers shop on a different domain than WooCommerce runs on
+# (headless / Next.js storefronts), e.g. https://jiaexpress.com. Used for product links
+# and as a fallback page list when the sitemap can't be read.
+STOREFRONT_URL = _env("STOREFRONT_URL", "").rstrip("/")
+FALLBACK_PAGE_PATHS = _list(
+    "FALLBACK_PAGE_PATHS",
+    "/shipping-policy,/shipping,/refund-policy,/return-policy,/returns,/refund_returns,/contact,/contact-us,"
+    "/about-us,/about,/faq,/faqs,/privacy-policy,/terms-of-service,/terms-and-conditions",
+)
+
 # --- Bridge behaviour ---------------------------------------------------------
 CACHE_DIR = Path(_env("CACHE_DIR", str(PROJECT_ROOT / "bridge_cache")))
 LOOKUP_FILE = Path(_env("LOOKUP_FILE", str(PROJECT_ROOT / "lookups" / "lookups.yml")))

@@ -152,16 +152,23 @@ class ActionProductDetails(Action):
         if cached is None:
             hits = cat.search(tracker.latest_message.get("text", ""), limit=1)
             cached = hits[0] if hits else None
-        if cached is None:
-            dispatcher.utter_message(response="utter_ask_which_product")
-            return []
 
         product = None
         if woo():
             try:
-                product = woo().get_product(cached["id"]) if cached.get("id") else woo().get_product_by_slug(cached["slug"])
+                if cached is not None:
+                    product = woo().get_product(cached["id"]) if cached.get("id") else woo().get_product_by_slug(cached["slug"])
+                elif tracker.get_slot("current_product_id"):
+                    # Not in the local catalogue (e.g. sync still running): ask WooCommerce directly.
+                    product = woo().get_product(tracker.get_slot("current_product_id"))
+                elif named:
+                    found = woo().search_products(clean_query(named), limit=1)
+                    product = found[0] if found else None
             except WooError as exc:
                 log.warning("product fetch failed: %s", exc)
+        if cached is None and product is None:
+            dispatcher.utter_message(response="utter_ask_which_product")
+            return []
 
         if not product:  # sitemap-only mode
             dispatcher.utter_message(text=f"**{cached['name']}** — see full details here: {cached['url']}")

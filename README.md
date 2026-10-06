@@ -37,6 +37,7 @@ Set these as **environment variables** in your deployment platform, or put them 
 | `WC_URL` | yes | `https://your-store.com` |
 | `WC_CONSUMER_KEY` / `WC_CONSUMER_SECRET` | yes | from *WooCommerce → Settings → Advanced → REST API* (Read) |
 | `SITEMAP_URL` | no | only if auto-detection fails |
+| `STOREFRONT_URL` | headless shops | the domain customers shop on, e.g. `https://jiaexpress.com`, when it differs from `WC_URL` |
 | `RETURN_WINDOW_DAYS`, `DELIVERY_DATE_META_KEYS`, `CRAWL_KINDS`, `SYNC_INTERVAL_SECONDS`, … | no | see `.env.example` |
 
 The sitemap is found automatically (Yoast / Rank Math `sitemap_index.xml`, or WordPress core `wp-sitemap.xml`).
@@ -167,6 +168,8 @@ tests/             mock WooCommerce server, fake Chatwoot, 28 tests
 | `rasa` shows **(unhealthy)**, and the bot replies with nothing (`[]`) | The image has no model loaded. Pull the latest image (`docker compose pull && docker compose up -d`) and check the GitHub Actions run succeeded. |
 | `rasa` keeps restarting with exit code 137 | Out of memory. Rasa needs about 2 GB free. Add swap or use a 4 GB+ server. |
 | Sync fails with `401 woocommerce_rest_cannot_view` | Wrong key/secret, or the key isn't **Read** permission. Some hosts strip the `Authorization` header; ask the host to allow it. |
+| Sync summary shows `"errors"` | Each stage (sitemap, WooCommerce API, pages) runs on its own, and the error tells you which one failed. Set `SITEMAP_URL` explicitly if the sitemap isn't found. |
+| Sync summary shows `"pages_not_read": {"cloudflare": …}` | Cloudflare blocks the crawler. Add a WAF custom rule: User Agent contains `RasaWooBridge` → Skip. |
 | Sync can't reach the store | `WC_URL` must be reachable *from inside Docker*. Don't use `localhost` (see step 2). |
 
 Useful commands: `docker compose ps`, `docker compose logs -f rasa action-server`,

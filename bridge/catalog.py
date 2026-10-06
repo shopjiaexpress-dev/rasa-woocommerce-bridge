@@ -55,7 +55,9 @@ class Catalog:
                         "slug": p["slug"],
                         # Prefer the storefront URL from the sitemap (headless shops serve products
                         # on a different domain than WooCommerce's permalink).
-                        "url": sitemap_products[p["slug"]].url if p["slug"] in sitemap_products else p.get("permalink", ""),
+                        "url": sitemap_products[p["slug"]].url if p["slug"] in sitemap_products
+                        else (f"{config.STOREFRONT_URL}/product/{p['slug']}" if config.STOREFRONT_URL
+                              else p.get("permalink", "")),
                         "categories": [c["name"] for c in p.get("categories", [])],
                         "price": p.get("price"),
                         "stock_status": p.get("stock_status"),

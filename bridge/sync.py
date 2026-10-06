@@ -19,7 +19,7 @@ from pathlib import Path
 from . import config
 from .catalog import Catalog
 from .page_index import PageIndex
-from .sitemap import SitemapReader, summarize
+from .sitemap import PAGE, SitemapEntry, SitemapReader, summarize
 from .store import CATALOG_FILE, PAGES_FILE
 from .woo_client import WooClient
 
@@ -52,37 +52,59 @@ def write_lookups(lookups: dict, path: Path) -> bool:
 
 def run(no_api: bool = False, no_crawl: bool = False) -> dict:
     t0 = time.time()
-    if not config.WC_URL and not config.SITEMAP_URL:
-        raise SystemExit("Set WC_URL (and optionally SITEMAP_URL) in .env first.")
+    if not (config.WC_URL or config.SITEMAP_URL or config.STOREFRONT_URL):
+        raise SystemExit("Set WC_URL (and optionally SITEMAP_URL / STOREFRONT_URL) first.")
 
-    reader = SitemapReader()
-    sitemap_url = reader.discover(config.WC_URL or config.SITEMAP_URL)
-    entries = reader.read(sitemap_url)
-    if not entries:
-        raise SystemExit(f"Sitemap {sitemap_url} returned no URLs.")
+    errors = {}
 
+    # 1) Sitemap (optional: a failure here must not stop the rest)
+    reader, sitemap_url, entries = SitemapReader(), None, []
+    try:
+        sitemap_url = reader.discover(config.SITEMAP_URL or config.STOREFRONT_URL or config.WC_URL)
+        entries = reader.read(sitemap_url)
+        if not entries:
+            errors["sitemap"] = f"{sitemap_url} returned no URLs"
+    except Exception as exc:  # noqa: BLE001
+        errors["sitemap"] = str(exc)
+        log.error("Sitemap step failed: %s", exc)
+    if not any(e.kind in set(config.CRAWL_KINDS) for e in entries) and config.STOREFRONT_URL:
+        log.warning("No pages from the sitemap; trying common page paths on %s", config.STOREFRONT_URL)
+        entries += [SitemapEntry(config.STOREFRONT_URL + p_, PAGE) for p_ in config.FALLBACK_PAGE_PATHS]
+
+    # 2) Products & categories (API first, sitemap as fallback)
     woo = None
     if not no_api:
         if config.woo_api_configured():
             woo = WooClient()
         else:
             log.warning("WooCommerce API keys not set - building catalogue from sitemap only.")
-
     try:
         catalog = Catalog.build(entries, woo)
-    except Exception as exc:  # noqa: BLE001 - keep going with what the sitemap gives us
+    except Exception as exc:  # noqa: BLE001
+        errors["woocommerce_api"] = str(exc)
         log.error("WooCommerce API failed (%s); building the catalogue from the sitemap only.", exc)
         catalog = Catalog.build(entries, None)
     config.CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    catalog.save(config.CACHE_DIR / CATALOG_FILE)
+    if catalog.products or not (config.CACHE_DIR / CATALOG_FILE).exists():
+        catalog.save(config.CACHE_DIR / CATALOG_FILE)
+    else:
+        log.warning("Catalogue came back empty; keeping the previous one.")
     (config.CACHE_DIR / "sitemap.json").write_text(json.dumps([e.to_dict() for e in entries], indent=1))
 
+    # 3) Page content for FAQ-style answers
     pages_count, crawl_failed = None, None
     if not no_crawl:
-        index = PageIndex.crawl(entries)
-        index.save(config.CACHE_DIR / PAGES_FILE)
-        pages_count = len(index.chunks)
-        crawl_failed = index.stats.get("failed") or None
+        try:
+            index = PageIndex.crawl(entries)
+            pages_count = len(index.chunks)
+            crawl_failed = index.stats.get("failed") or None
+            if index.chunks or not (config.CACHE_DIR / PAGES_FILE).exists():
+                index.save(config.CACHE_DIR / PAGES_FILE)
+            else:
+                log.warning("No page text could be read; keeping the previous page index.")
+        except Exception as exc:  # noqa: BLE001
+            errors["pages"] = str(exc)
+            log.error("Page crawl failed: %s", exc)
 
     changed = write_lookups(catalog.lookup_names(), config.LOOKUP_FILE)
     report = {
@@ -93,6 +115,7 @@ def run(no_api: bool = False, no_crawl: bool = False) -> dict:
         "page_chunks": pages_count,
         "pages_not_read": crawl_failed,
         "lookups_changed": changed,
+        "errors": errors or None,
         "seconds": round(time.time() - t0, 1),
     }
     (config.CACHE_DIR / "last_sync.json").write_text(json.dumps(report, indent=1))

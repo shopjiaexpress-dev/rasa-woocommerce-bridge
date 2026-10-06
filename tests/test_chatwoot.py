@@ -97,7 +97,8 @@ def test_reply_is_posted_to_conversation():
     reset()
     assert post(payload(1, "do you have hoodies?")).status_code == 200
     wait_for(2, CW_CALLS)
-    assert RASA_CALLS[0]["sender"] == "cw-1-42" and RASA_CALLS[0]["message"] == "do you have hoodies?"
+    assert RASA_CALLS[0]["sender"] == C.sender_for(1, 42) and RASA_CALLS[0]["message"] == "do you have hoodies?"
+    assert RASA_CALLS[0]["sender"].startswith("cw-1-42-") and len(RASA_CALLS[0]["sender"]) > 20
     assert [c["path"] for c in CW_CALLS] == ["/api/v1/accounts/1/conversations/42/messages"] * 2
     assert CW_CALLS[0]["token"] == "bot-token"
     assert CW_CALLS[0]["body"] == {"content": "echo: do you have hoodies?", "message_type": "outgoing", "private": False}

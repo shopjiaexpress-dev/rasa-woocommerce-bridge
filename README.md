@@ -88,7 +88,7 @@ silent until an agent sets the conversation back to *pending*.
 3. Set on the server: `CHATWOOT_URL`, `CHATWOOT_BOT_TOKEN`, `CHATWOOT_WEBHOOK_SECRET`.
    No secret shown in your version? Set `CHATWOOT_URL_TOKEN` to a long random string instead, and append
    `?token=<that string>` to the webhook URL.
-4. Route `/chatwoot/` on your Rasa domain to the connector (`127.0.0.1:5056`). With Caddy:
+4. Route `/chatwoot/` on your Rasa domain to the connector. With Nginx Proxy Manager: add a Custom Location `/chatwoot/` → `rasa-woocommerce-bridge-chatwoot-connector-1`, port `5056` (both containers join NPM's network). With Caddy:
    ```
    ai.your-domain.com {
        handle /chatwoot/* {

@@ -41,7 +41,9 @@ x-bridge-common: &bridge-common
 services:
   rasa:
     image: ${RASA_IMAGE:-ghcr.io/shopjiaexpress-dev/rasa-woocommerce-bridge-rasa:latest}
-    # Command, config and trained model come from the image.
+    # Config and trained model come from the image. No --enable-api: Rasa's admin/tracker
+    # API stays off, so conversations and order lookups can't be read from outside.
+    command: ["run", "--model", "models", "--endpoints", "endpoints.yml", "--credentials", "credentials.yml", "--cors", "*"]
     volumes:
       - tracker:/app/tracker
     networks:
@@ -55,7 +57,7 @@ services:
       action-server:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import json,urllib.request; s=json.load(urllib.request.urlopen('http://localhost:5005/status', timeout=5)); assert s.get('model_file'), 'no model loaded'"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5005/', timeout=5)"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -80,11 +82,14 @@ services:
     entrypoint: ["sh", "-c", "while true; do python -m bridge.sync || echo 'sync failed'; sleep ${SYNC_INTERVAL_SECONDS:-21600}; done"]
     restart: unless-stopped
 
-  # Chatwoot Agent Bot <-> Rasa. Chatwoot posts to https://<rasa-domain>/chatwoot/webhook,
-  # which your reverse proxy forwards to 127.0.0.1:5056.
+  # Chatwoot Agent Bot <-> Rasa. Chatwoot posts to https://ai.jiaexpress.com/chatwoot/webhook;
+  # Nginx Proxy Manager forwards that to this container (rasa-woocommerce-bridge-chatwoot-connector-1:5056).
   chatwoot-connector:
     image: ${ACTIONS_IMAGE:-ghcr.io/shopjiaexpress-dev/rasa-woocommerce-bridge-actions:latest}
     entrypoint: ["python", "-m", "bridge.chatwoot_connector"]
+    networks:
+      - default   # reaches rasa
+      - npm       # reachable by Nginx Proxy Manager
     environment:
       CHATWOOT_URL: ${CHATWOOT_URL:-}
       CHATWOOT_BOT_TOKEN: ${CHATWOOT_BOT_TOKEN:-}

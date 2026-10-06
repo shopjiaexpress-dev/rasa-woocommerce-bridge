@@ -26,4 +26,4 @@ RUN rasa train --domain domain.yml --data data lookups --config config.yml \
 
 EXPOSE 5005
 # Inherited: ENTRYPOINT ["rasa"]
-CMD ["run", "--enable-api", "--cors", "*", "--model", "models", "--endpoints", "endpoints.yml", "--credentials", "credentials.yml"]
+CMD ["run", "--cors", "*", "--model", "models", "--endpoints", "endpoints.yml", "--credentials", "credentials.yml"]

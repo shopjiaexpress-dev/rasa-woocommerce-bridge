@@ -152,13 +152,22 @@ def should_handle(p: dict) -> bool:
     return bool((p.get("content") or "").strip())
 
 
+def sender_for(account_id, conversation_id) -> str:
+    """Rasa conversation id for a Chatwoot conversation. It includes an HMAC so
+    it can't be guessed. Rasa keeps verified-order state per conversation, so a
+    guessable id would let someone continue another customer's conversation."""
+    key = (CHATWOOT_WEBHOOK_SECRET or CHATWOOT_URL_TOKEN or CHATWOOT_BOT_TOKEN or "rasa").encode()
+    tag = hmac.new(key, f"{account_id}-{conversation_id}".encode(), hashlib.sha256).hexdigest()[:20]
+    return f"cw-{account_id}-{conversation_id}-{tag}"
+
+
 def process(p: dict):
     account_id = (p.get("account") or {}).get("id") or (p.get("conversation") or {}).get("account_id")
     conversation_id = (p.get("conversation") or {}).get("id")
     if not account_id or not conversation_id:
         log.warning("payload without account/conversation id")
         return
-    sender_id = f"cw-{account_id}-{conversation_id}"
+    sender_id = sender_for(account_id, conversation_id)
     with _conv_lock(sender_id):  # keep replies in order per conversation
         try:
             replies = ask_rasa(sender_id, p["content"].strip(), {

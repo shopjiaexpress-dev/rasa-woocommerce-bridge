@@ -125,7 +125,7 @@ silent until an agent sets the conversation back to *pending*.
 | Sequential Order Numbers | Nothing. The bridge searches by the visible order number if it doesn't match the ID. |
 | A different return window | `RETURN_WINDOW_DAYS` |
 | Pages that mostly aren't FAQs | `CRAWL_KINDS=page` (skip blog posts) and/or lower `CRAWL_MAX_PAGES` |
-| Answers coming from the wrong page | Raise `PAGE_ANSWER_MIN_SCORE` (default 2.0), or add words to `QUERY_SYNONYMS` in `bridge/page_index.py` |
+| Answers coming from the wrong page | Raise `PAGE_ANSWER_MIN_SCORE` (default 1.5), or add words to `QUERY_SYNONYMS` in `bridge/page_index.py` |
 
 ## 6. Project layout
 ```

@@ -18,5 +18,7 @@ def make_session() -> requests.Session:
     s.mount("http://", adapter)
     s.mount("https://", adapter)
     s.headers["User-Agent"] = config.USER_AGENT
+    s.headers["Accept"] = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+    s.headers["Accept-Language"] = "en-IN,en;q=0.9"
     s.verify = config.WC_VERIFY_SSL
     return s

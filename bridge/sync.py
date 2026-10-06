@@ -68,16 +68,21 @@ def run(no_api: bool = False, no_crawl: bool = False) -> dict:
         else:
             log.warning("WooCommerce API keys not set - building catalogue from sitemap only.")
 
-    catalog = Catalog.build(entries, woo)
+    try:
+        catalog = Catalog.build(entries, woo)
+    except Exception as exc:  # noqa: BLE001 - keep going with what the sitemap gives us
+        log.error("WooCommerce API failed (%s); building the catalogue from the sitemap only.", exc)
+        catalog = Catalog.build(entries, None)
     config.CACHE_DIR.mkdir(parents=True, exist_ok=True)
     catalog.save(config.CACHE_DIR / CATALOG_FILE)
     (config.CACHE_DIR / "sitemap.json").write_text(json.dumps([e.to_dict() for e in entries], indent=1))
 
-    pages_count = None
+    pages_count, crawl_failed = None, None
     if not no_crawl:
         index = PageIndex.crawl(entries)
         index.save(config.CACHE_DIR / PAGES_FILE)
         pages_count = len(index.chunks)
+        crawl_failed = index.stats.get("failed") or None
 
     changed = write_lookups(catalog.lookup_names(), config.LOOKUP_FILE)
     report = {
@@ -86,6 +91,7 @@ def run(no_api: bool = False, no_crawl: bool = False) -> dict:
         "products": len(catalog.products),
         "categories": len(catalog.categories),
         "page_chunks": pages_count,
+        "pages_not_read": crawl_failed,
         "lookups_changed": changed,
         "seconds": round(time.time() - t0, 1),
     }

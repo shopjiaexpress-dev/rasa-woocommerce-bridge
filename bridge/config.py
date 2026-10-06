@@ -46,7 +46,13 @@ LOOKUP_FILE = Path(_env("LOOKUP_FILE", str(PROJECT_ROOT / "lookups" / "lookups.y
 CRAWL_MAX_PAGES = int(_env("CRAWL_MAX_PAGES", "300"))
 CRAWL_KINDS = _list("CRAWL_KINDS", "page,post")
 REQUEST_TIMEOUT = float(_env("REQUEST_TIMEOUT", "15"))
-USER_AGENT = _env("USER_AGENT", "RasaWooBridge/1.0 (+chatbot sync)")
+# Browser-like, so CDN bot filters (e.g. Cloudflare) let the sync read your pages.
+# Still contains "RasaWooBridge" so you can allow-list it explicitly.
+USER_AGENT = _env(
+    "USER_AGENT",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/126.0 Safari/537.36 RasaWooBridge/1.1",
+)
 
 # Orders / returns
 RETURN_WINDOW_DAYS = int(_env("RETURN_WINDOW_DAYS", "30"))
@@ -59,7 +65,7 @@ DELIVERY_DATE_META_KEYS = _list(
 )
 
 # Page answers: minimum BM25 score before we trust a page snippet.
-PAGE_ANSWER_MIN_SCORE = float(_env("PAGE_ANSWER_MIN_SCORE", "2.0"))
+PAGE_ANSWER_MIN_SCORE = float(_env("PAGE_ANSWER_MIN_SCORE", "1.5"))
 
 
 def woo_api_configured() -> bool:

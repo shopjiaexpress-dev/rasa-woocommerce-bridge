@@ -103,7 +103,7 @@ class ActionSearchProducts(Action):
         if not results and woo():
             try:
                 results = [
-                    {"id": p["id"], "name": _strip(p["name"]), "url": p["permalink"], "price": p.get("price"),
+                    {"id": p["id"], "name": _strip(p["name"]), "url": cat.public_url(p), "price": p.get("price"),
                      "stock_status": p.get("stock_status")}
                     for p in woo().search_products(clean_query(query), limit=5)
                 ]
@@ -190,7 +190,7 @@ class ActionProductDetails(Action):
         ]
         if attrs:
             lines.append("Options — " + "; ".join(attrs))
-        lines.append(f"View / buy: {product.get('permalink')}")
+        lines.append(f"View / buy: {cat.public_url(product)}")
         dispatcher.utter_message(text="\n".join(lines))
         return [SlotSet("current_product_id", str(product["id"])), SlotSet("current_product_name", _strip(product["name"]))]
 

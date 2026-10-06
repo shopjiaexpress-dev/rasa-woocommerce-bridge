@@ -53,7 +53,9 @@ class Catalog:
                         "id": p["id"],
                         "name": _strip_html(p["name"]),
                         "slug": p["slug"],
-                        "url": p.get("permalink") or (sitemap_products.get(p["slug"]).url if p["slug"] in sitemap_products else ""),
+                        # Prefer the storefront URL from the sitemap (headless shops serve products
+                        # on a different domain than WooCommerce's permalink).
+                        "url": sitemap_products[p["slug"]].url if p["slug"] in sitemap_products else p.get("permalink", ""),
                         "categories": [c["name"] for c in p.get("categories", [])],
                         "price": p.get("price"),
                         "stock_status": p.get("stock_status"),
@@ -100,6 +102,11 @@ class Catalog:
         if slug:
             return self._by_slug.get(slug)
         return None
+
+    def public_url(self, product: dict) -> str:
+        """Storefront URL for a product dict from the API (falls back to its permalink)."""
+        hit = self._by_slug.get(product.get("slug")) or (self._by_id.get(product.get("id")) if product.get("id") else None)
+        return (hit or {}).get("url") or product.get("permalink", "")
 
     def find_category(self, text: str, min_score: int = 80) -> Optional[Dict]:
         if not self.categories or not text:

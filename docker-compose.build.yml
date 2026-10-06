@@ -4,19 +4,25 @@
 services:
   rasa:
     image: rasa-woocommerce-bridge-rasa:local
+    pull_policy: build
     build:
       context: .
       dockerfile: Dockerfile.rasa
   rasa-shell:
     image: rasa-woocommerce-bridge-rasa:local
+    pull_policy: never
   action-server:
     image: rasa-woocommerce-bridge-actions:local
+    pull_policy: build
     build:
       context: .
       dockerfile: Dockerfile.actions
   auto-sync:
     image: rasa-woocommerce-bridge-actions:local
+    pull_policy: never
   sync:
     image: rasa-woocommerce-bridge-actions:local
+    pull_policy: never
   chatwoot-connector:
     image: rasa-woocommerce-bridge-actions:local
+    pull_policy: never

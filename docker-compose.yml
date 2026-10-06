@@ -31,6 +31,7 @@ x-bridge-env: &bridge-env
 
 x-bridge-common: &bridge-common
   image: ${ACTIONS_IMAGE:-ghcr.io/shopjiaexpress-dev/rasa-woocommerce-bridge-actions:latest}
+  pull_policy: always   # every deploy fetches the newest image (":latest" is otherwise reused)
   environment: *bridge-env
   volumes:
     - bridge_cache:/app/bridge_cache
@@ -41,6 +42,7 @@ x-bridge-common: &bridge-common
 services:
   rasa:
     image: ${RASA_IMAGE:-ghcr.io/shopjiaexpress-dev/rasa-woocommerce-bridge-rasa:latest}
+    pull_policy: always
     # Config and trained model come from the image. No --enable-api: Rasa's admin/tracker
     # API stays off, so conversations and order lookups can't be read from outside.
     command: ["run", "--model", "models", "--endpoints", "endpoints.yml", "--credentials", "credentials.yml", "--cors", "*"]
@@ -86,6 +88,7 @@ services:
   # Nginx Proxy Manager forwards that to this container (rasa-woocommerce-bridge-chatwoot-connector-1:5056).
   chatwoot-connector:
     image: ${ACTIONS_IMAGE:-ghcr.io/shopjiaexpress-dev/rasa-woocommerce-bridge-actions:latest}
+    pull_policy: always
     entrypoint: ["python", "-m", "bridge.chatwoot_connector"]
     networks:
       - default   # reaches rasa
@@ -117,6 +120,7 @@ services:
 
   rasa-shell:
     image: ${RASA_IMAGE:-ghcr.io/shopjiaexpress-dev/rasa-woocommerce-bridge-rasa:latest}
+    pull_policy: always
     command: shell --model models --endpoints endpoints.yml
     stdin_open: true
     tty: true

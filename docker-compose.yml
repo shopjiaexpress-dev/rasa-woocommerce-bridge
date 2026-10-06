@@ -44,6 +44,9 @@ services:
     # Command, config and trained model come from the image.
     volumes:
       - tracker:/app/tracker
+    networks:
+      - default   # talks to action-server (and chatwoot-connector reaches it here)
+      - npm       # shared with Nginx Proxy Manager, which forwards ai.jiaexpress.com here
     ports:
       # Only reachable from this server (your Caddy/Nginx reverse proxy).
       # Docker-published ports bypass ufw, so don't publish on 0.0.0.0.
@@ -116,6 +119,14 @@ services:
       action-server:
         condition: service_healthy
     profiles: ["tools"]
+
+networks:
+  default: {}
+  # Nginx Proxy Manager's network. It must already exist (created by the NPM project):
+  #   docker network ls | grep nginx-proxy-manager
+  npm:
+    external: true
+    name: nginx-proxy-manager_default
 
 volumes:
   tracker:
